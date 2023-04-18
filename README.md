@@ -1,0 +1,3 @@
+# boardie
+
+Linux soundboard thingy
