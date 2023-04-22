@@ -49,8 +49,9 @@
     {
       devShells.default = pkgs.devshell.mkShell {
         packages = with pkgs; [
-          poetry
           ffmpeg
+
+          poetry
           (pkgs.poetry2nix.mkPoetryEnv {
             projectDir = ./.;
             overrides = pyOverrides pkgs;
