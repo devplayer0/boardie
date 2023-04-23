@@ -59,6 +59,8 @@ class Boardie:
         self.device.grab()
 
         self.pa = pyaudio.PyAudio()
+        if audio_device is None:
+            audio_device = self.pa.get_default_output_device_info()['index']
         dev_info = self.pa.get_device_info_by_index(audio_device)
         self.sample_rate = int(dev_info['defaultSampleRate'])
         self.stream = self.pa.open(
