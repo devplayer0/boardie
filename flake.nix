@@ -16,12 +16,18 @@
       pyaudio = super.pyaudio.overridePythonAttrs (old: {
         buildInputs = old.buildInputs ++ [ pkgs.portaudio ];
       });
+      evdev = super.evdev.overridePythonAttrs (old: {
+        patchPhase = ''
+          substituteInPlace setup.py \
+            --replace-fail /usr/include ${pkgs.linuxHeaders}/include
+        '';
+      });
     });
   in
   {
     overlays = rec {
       boardie = composeManyExtensions [
-        poetry2nix.overlay
+        poetry2nix.overlays.default
         (final: prev: {
           boardie = prev.poetry2nix.mkPoetryApplication {
             projectDir = ./.;
