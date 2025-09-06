@@ -1,20 +1,18 @@
-[tool.poetry]
+[project]
 name = "boardie"
 version = "0.1.0"
 description = "Linux soundboard"
-authors = ["Jack O'Sullivan <j@ckos.ie>"]
+authors = [
+  {name = "Jack O'Sullivan", email = "j@ckos.ie"}
+]
 readme = "README.md"
 
-[tool.poetry.dependencies]
-python = "^3.11"
-evdev = "^1.7.1"
-pydub = "^0.25.1"
-pyaudio = "^0.2.14"
-pyyaml = "^6.0.1"
+dependencies = [
+  "evdev~=1.9.2",
+  "pydub~=0.25.1",
+  "pyaudio~=0.2.14",
+  "pyyaml~=6.0.2",
+]
 
-[tool.poetry.scripts]
+[project.scripts]
 boardie = 'boardie:main'
-
-[build-system]
-requires = ["poetry-core"]
-build-backend = "poetry.core.masonry.api"

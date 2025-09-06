@@ -4,44 +4,40 @@
   inputs = {
     flake-utils.url = "github:numtide/flake-utils";
     devshell.url = "github:numtide/devshell";
-    poetry2nix.url = "github:nix-community/poetry2nix";
+
+    pyproject-nix = {
+      url = "github:pyproject-nix/pyproject.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
-  outputs = { self, nixpkgs, flake-utils, devshell, poetry2nix }:
+  outputs = {
+    self, nixpkgs,
+    flake-utils, devshell,
+    pyproject-nix,
+    ...
+  }:
   let
-    inherit (nixpkgs.lib) composeManyExtensions;
     inherit (flake-utils.lib) eachDefaultSystem;
 
-    pyOverrides = pkgs: pkgs.poetry2nix.overrides.withDefaults (self: super: {
-      pyaudio = super.pyaudio.overridePythonAttrs (old: {
-        buildInputs = old.buildInputs ++ [ pkgs.portaudio ];
-      });
-      evdev = super.evdev.overridePythonAttrs (old: {
-        patchPhase = ''
-          substituteInPlace setup.py \
-            --replace-fail /usr/include ${pkgs.linuxHeaders}/include
-        '';
-      });
-    });
+    project = pyproject-nix.lib.project.loadPyproject {
+      projectRoot = ./.;
+    };
   in
   {
     overlays = rec {
-      boardie = composeManyExtensions [
-        poetry2nix.overlays.default
-        (final: prev: {
-          boardie = prev.poetry2nix.mkPoetryApplication {
-            projectDir = ./.;
-            overrides = pyOverrides prev;
-
-            makeWrapperArgs = [
-              ''--prefix PATH ':' "${prev.ffmpeg}/bin"''
-            ];
-            meta.mainProgram = "boardie";
-          };
-        })
-      ];
+      boardie = (final: prev:
+        let
+          python = prev.python3;
+          attrs = project.renderers.buildPythonPackage { inherit python; };
+        in
+        {
+          boardie = python.pkgs.buildPythonPackage attrs;
+        }
+      );
       default = boardie;
     };
+    inherit project;
   } // (eachDefaultSystem (system:
     let
       pkgs = import nixpkgs {
@@ -51,17 +47,23 @@
           self.overlays.default
         ];
       };
+
+      python' = pkgs.python3;
+      python = python'.withPackages (project.renderers.withPackages { python = python'; });
     in
     {
       devShells.default = pkgs.devshell.mkShell {
         packages = with pkgs; [
           ffmpeg
 
-          poetry
-          (pkgs.poetry2nix.mkPoetryEnv {
-            projectDir = ./.;
-            overrides = pyOverrides pkgs;
-          })
+          python
+        ];
+
+        commands = [
+          {
+            name = "boardie";
+            command = "${python}/bin/python -m boardie";
+          }
         ];
       };
 
@@ -74,5 +76,7 @@
         inherit (pkgs) boardie;
         default = boardie;
       };
+
+      checks.versionConstraints = assert project.validators.validateVersionConstraints { python = python'; } == { }; pkgs.boardie;
     }));
 }
